@@ -1,5 +1,7 @@
 import SwiftUI
 
+// 1. Fix the Typealias
+// (This part was actually okay because UIKit was checked first, but this is safer)
 #if canImport(UIKit)
   typealias PlatformImage = UIImage
 #elseif canImport(AppKit)
@@ -12,7 +14,10 @@ extension PlatformImage {
     bundle: Bundle?,
     environment: ColorEnvironmentValues
   ) -> PlatformImage? {
-    #if canImport(AppKit)
+    // 2. Fix the Logic Block
+    // We add '&& !targetEnvironment(macCatalyst)' so Catalyst skips this block
+    // and falls through to the UIKit block below.
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
       guard let appearance = NSAppearance(environment: environment) else {
         return nil
       }
@@ -26,6 +31,7 @@ extension PlatformImage {
       }
       return image
     #elseif canImport(UIKit) && !os(watchOS)
+      // Catalyst will now correctly enter this block
       PlatformImage(
         named: name,
         in: bundle,
@@ -48,7 +54,9 @@ extension SwiftUI.Image {
   }
 }
 
-#if canImport(AppKit)
+// 3. Fix the Extension
+// Catalyst cannot extend NSAppearance, so we must exclude it here too.
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
   extension NSAppearance {
     convenience init?(environment: ColorEnvironmentValues) {
       switch (environment.colorScheme, environment.colorSchemeContrast) {
