@@ -111,7 +111,7 @@ extension AnyFontProvider {
         return nil
       }
       // Fix: Explicitly cast NSFont to CTFont       
-      self.init(PlatformFontProvider(font: font as CTFont))
+      self.init(PlatformFontProvider(font: font as! CTFont))
 
     //
     // Modifiers
