@@ -110,8 +110,7 @@ extension AnyFontProvider {
       guard let font = mirror.descendant("font") as? PlatformFont else {
         return nil
       }
-      // Fix: Explicitly cast NSFont to CTFont       
-      self.init(PlatformFontProvider(font: font as! CTFont))
+      self.init(PlatformFontProvider(font: font))
 
     //
     // Modifiers

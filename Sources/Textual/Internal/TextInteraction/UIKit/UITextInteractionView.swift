@@ -110,6 +110,12 @@
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
       let location = gesture.location(in: self)
       guard let url = model.url(for: location) else {
+        // On Mac Catalyst, the second click of a double-click reaches this handler after
+        // `UITextInteraction` has selected the word, so clearing here would undo that selection.
+        // A single click already clears the selection there.
+        #if !targetEnvironment(macCatalyst)
+          model.selectedRange = nil
+        #endif
         return
       }
       openURL(url)
