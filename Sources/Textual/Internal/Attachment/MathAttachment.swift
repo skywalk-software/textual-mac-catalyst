@@ -37,7 +37,30 @@ struct MathAttachment: Attachment {
   }
 
   func sizeThatFits(_ proposal: ProposedViewSize, in environment: TextEnvironmentValues) -> CGSize {
-    typographicBounds(fitting: proposal, in: environment).size
+    var bounds = typographicBounds(fitting: proposal, in: environment)
+    guard let width = proposal.width else {
+      return bounds.size
+    }
+
+    // While looking for a better line break, SwiftUIMath lets a line run up to 30% past the width
+    // it was given, so ask for less until the formula fits. SwiftUIMath rounds widths to the half
+    // point, so half a point over counts as fitting. A piece too wide to break stays wide.
+    var fittingWidth = width
+    for _ in 0..<3 where bounds.width > width + 0.5 {
+      fittingWidth -= bounds.width - width
+      guard fittingWidth > 0 else {
+        break
+      }
+      let narrowerBounds = typographicBounds(
+        fitting: .init(width: fittingWidth, height: proposal.height),
+        in: environment
+      )
+      if narrowerBounds.width < bounds.width {
+        bounds = narrowerBounds
+      }
+    }
+
+    return bounds.size
   }
 
   private func typographicBounds(

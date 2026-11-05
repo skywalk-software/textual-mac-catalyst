@@ -33,6 +33,8 @@ extension StructuredText {
       WithInlineStyle(AttributedString(content)) {
         TextFragment($0)
       }
+      // A cell is narrower than the whole text, so its attachments are measured against the cell.
+      .coordinateSpace(.textContainer)
     }
 
     private var indentationLevel: Int {

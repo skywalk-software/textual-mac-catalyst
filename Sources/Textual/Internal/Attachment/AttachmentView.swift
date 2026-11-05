@@ -52,11 +52,26 @@ struct AttachmentView: View {
         }
       }
     } symbols: {
+      let sizes = measuredSizes
       ForEach(Array(attachments), id: \.self) { attachment in
         attachment.body
+          .frame(width: sizes[attachment]?.width, height: sizes[attachment]?.height)
           .tag(attachment)
       }
     }
+  }
+
+  /// The size each attachment was measured at. Laying an attachment out at any other size can change
+  /// it (a formula breaks its lines differently), and drawing it into its run then stretches it.
+  private var measuredSizes: [AnyAttachment: CGSize] {
+    var sizes: [AnyAttachment: CGSize] = [:]
+    for run in layout.flatMap(\.self) {
+      guard let attachment = run.attachment, sizes[attachment] == nil else {
+        continue
+      }
+      sizes[attachment] = run.attachmentSize
+    }
+    return sizes
   }
 
   private func opacity(
