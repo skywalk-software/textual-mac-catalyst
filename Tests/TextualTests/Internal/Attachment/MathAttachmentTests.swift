@@ -23,7 +23,8 @@ struct MathAttachmentTests {
   @Test func formulaKeepsItsNaturalWidthWhenItFits() {
     let naturalSize = attachment.sizeThatFits(.unspecified, in: environment)
 
-    let size = attachment.sizeThatFits(.init(width: 400, height: nil), in: environment)
+    let size = attachment.sizeThatFits(
+      .init(width: naturalSize.width + 20, height: nil), in: environment)
 
     #expect(size == naturalSize)
   }
