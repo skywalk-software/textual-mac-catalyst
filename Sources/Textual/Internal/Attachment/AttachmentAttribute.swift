@@ -8,6 +8,7 @@ import SwiftUI
 //
 // `AttachmentAttribute` is attached to the placeholder runs during `Text` construction. It carries:
 // - the original attachment value (type-erased as `AnyAttachment`)
+// - the size the attachment was measured at, which the overlay lays the attachment out at
 // - the run's `PresentationIntent` (used by formatters and higher-level rendering)
 //
 // `Text.Layout.Run` exposes lightweight accessors so overlay code can discover attachments without
@@ -15,10 +16,12 @@ import SwiftUI
 
 struct AttachmentAttribute: TextAttribute {
   var attachment: AnyAttachment
+  var size: CGSize
   var presentationIntent: PresentationIntent?
 
-  init(_ attachment: AnyAttachment, presentationIntent: PresentationIntent?) {
+  init(_ attachment: AnyAttachment, size: CGSize, presentationIntent: PresentationIntent?) {
     self.attachment = attachment
+    self.size = size
     self.presentationIntent = presentationIntent
   }
 }
@@ -26,6 +29,10 @@ struct AttachmentAttribute: TextAttribute {
 extension Text.Layout.Run {
   var attachment: AnyAttachment? {
     self[AttachmentAttribute.self]?.attachment
+  }
+
+  var attachmentSize: CGSize? {
+    self[AttachmentAttribute.self]?.size
   }
 
   var attachmentPresentationIntent: PresentationIntent? {

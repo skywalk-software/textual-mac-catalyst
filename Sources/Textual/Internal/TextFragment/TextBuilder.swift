@@ -81,6 +81,7 @@ extension Text {
           .customAttribute(
             AttachmentAttribute(
               key.attachment,
+              size: size,
               presentationIntent: run.presentationIntent
             )
           )
