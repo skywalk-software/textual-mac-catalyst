@@ -4,7 +4,8 @@ import Testing
 @testable import Textual
 
 struct MathAttachmentTests {
-  private let attachment = MathAttachment(latex: "a^3 - b^3 = (a-b)(a^2 + ab + b^2)", style: .inline)
+  private let attachment = MathAttachment(
+    latex: "a^3 - b^3 = (a-b)(a^2 + ab + b^2)", style: .inline)
   private let environment = TextEnvironmentValues()
 
   // APP-1270: swiftui-math can let a broken line run up to 30% past the width it was given, which a
