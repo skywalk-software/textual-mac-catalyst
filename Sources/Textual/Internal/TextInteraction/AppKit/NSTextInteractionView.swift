@@ -6,13 +6,13 @@
   // `NSTextInteractionView` implements selection and link interaction on macOS.
   //
   // The view sits in an overlay above one or more rendered `Text` fragments. It uses
-  // `TextSelectionModel` for hit testing and range manipulation, and it respects `exclusionRects`
-  // so embedded scrollable regions continue to receive input events. Link taps are forwarded to
-  // `openURL`.
+  // `TextSelectionModel` for hit testing and range manipulation, and it excludes `overflowRegions`
+  // from hit testing so embedded scrollable regions continue to receive input events. A selection
+  // that runs past a region copies all of it. Link taps are forwarded to `openURL`.
 
   final class NSTextInteractionView: NSView {
     var model: TextSelectionModel
-    var exclusionRects: [CGRect]
+    var overflowRegions: [OverflowRegion]
     var openURL: OpenURLAction
 
     override var acceptsFirstResponder: Bool { true }
@@ -24,11 +24,11 @@
 
     init(
       model: TextSelectionModel,
-      exclusionRects: [CGRect],
+      overflowRegions: [OverflowRegion],
       openURL: OpenURLAction
     ) {
       self.model = model
-      self.exclusionRects = exclusionRects
+      self.overflowRegions = overflowRegions
       self.openURL = openURL
 
       super.init(frame: .zero)
@@ -41,8 +41,8 @@
 
     override func hitTest(_ point: NSPoint) -> NSView? {
       let localPoint = convert(point, from: superview)
-      let isExcluded = exclusionRects.contains {
-        $0.contains(localPoint)
+      let isExcluded = overflowRegions.contains {
+        $0.frame.contains(localPoint)
       }
 
       if isExcluded {
@@ -262,7 +262,7 @@
         return
       }
 
-      let attributedText = model.attributedText(in: selectedRange)
+      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
       let transferableText = TransferableText(attributedString: attributedText)
       let itemProvider = NSItemProvider(object: transferableText)
 
@@ -279,7 +279,7 @@
         return
       }
 
-      let attributedText = model.attributedText(in: selectedRange)
+      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
 
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()

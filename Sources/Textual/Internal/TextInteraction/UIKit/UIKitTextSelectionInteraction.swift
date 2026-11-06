@@ -20,8 +20,8 @@
     }
 
     func body(content: Content) -> some View {
-      content.overlayPreferenceValue(OverflowFrameKey.self) { frames in
-        UIKitTextInteractionOverlay(model: model, overflowFrames: frames)
+      content.overlayPreferenceValue(OverflowRegionKey.self) { regions in
+        UIKitTextInteractionOverlay(model: model, overflowRegions: regions)
       }
     }
   }
