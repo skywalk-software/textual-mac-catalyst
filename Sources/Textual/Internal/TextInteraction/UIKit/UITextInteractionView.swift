@@ -16,6 +16,15 @@
       true
     }
 
+    /// Clears the selection once another view takes focus, since Copy only uses the focused text.
+    override func resignFirstResponder() -> Bool {
+      guard super.resignFirstResponder() else {
+        return false
+      }
+      model.selectedRange = nil
+      return true
+    }
+
     var model: TextSelectionModel
     var exclusionRects: [CGRect]
     var openURL: OpenURLAction
