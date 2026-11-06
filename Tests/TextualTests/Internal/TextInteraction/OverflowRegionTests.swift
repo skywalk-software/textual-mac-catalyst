@@ -31,11 +31,7 @@
       // given
       let rendered = try await render(codeBetweenParagraphs)
       let region = try #require(rendered.regions.first)
-      let view = UITextInteractionView(
-        model: rendered.model,
-        overflowRegions: rendered.regions,
-        openURL: OpenURLAction { _ in .discarded }
-      )
+      let view = makeView(rendered)
       let range = TextRange(start: rendered.model.startPosition, end: rendered.model.endPosition)
 
       // when
@@ -71,6 +67,75 @@
       #expect(
         Formatter(copied).html()
           == "<p>quebec romeo</p>\n<pre><code class=\"language-swift\">let sierra = 42</code></pre>"
+      )
+    }
+
+    @Test func draggingDownIntoACodeBlockSelectsPastIt() async throws {
+      // given
+      let rendered = try await render(codeBetweenParagraphs)
+      let region = try #require(rendered.regions.first)
+      let view = makeView(rendered)
+      let anchor = rendered.model.startPosition
+      let inFirstParagraph = try #require(rendered.model.position(from: anchor, offset: 3))
+      view.selectedTextRange = TextRangeBox(TextRange(start: anchor, end: anchor))
+      view.selectedTextRange = TextRangeBox(TextRange(start: anchor, end: inFirstParagraph))
+
+      // when
+      let topOfCodeBlock = CGPoint(x: region.frame.midX, y: region.frame.minY + 2)
+      let position = try #require(view.closestPosition(to: topOfCodeBlock) as? TextPositionBox)
+
+      // then
+      let secondParagraphStart = TextPosition(indexPath: .init(layout: 1), affinity: .downstream)
+      #expect(position.wrappedValue == secondParagraphStart)
+      let range = TextRange(start: anchor, end: position.wrappedValue)
+      #expect(rendered.model.overflowRegions(rendered.regions, in: range) == [region])
+    }
+
+    @Test func draggingUpIntoACodeBlockSelectsPastIt() async throws {
+      // given
+      let rendered = try await render(codeBetweenParagraphs)
+      let region = try #require(rendered.regions.first)
+      let view = makeView(rendered)
+      let anchor = rendered.model.endPosition
+      let inLastParagraph = try #require(rendered.model.position(from: anchor, offset: -3))
+      view.selectedTextRange = TextRangeBox(TextRange(start: anchor, end: anchor))
+      view.selectedTextRange = TextRangeBox(TextRange(start: inLastParagraph, end: anchor))
+
+      // when
+      let bottomOfCodeBlock = CGPoint(x: region.frame.midX, y: region.frame.maxY - 2)
+      let position = try #require(view.closestPosition(to: bottomOfCodeBlock) as? TextPositionBox)
+
+      // then
+      #expect(position.wrappedValue == rendered.model.position(before: region))
+      let range = TextRange(start: position.wrappedValue, end: anchor)
+      #expect(rendered.model.overflowRegions(rendered.regions, in: range) == [region])
+    }
+
+    @Test func draggingIntoATrailingCodeBlockSelectsToTheEnd() async throws {
+      // given
+      let rendered = try await render("quebec romeo\n\n```swift\nlet sierra = 42\n```")
+      let region = try #require(rendered.regions.first)
+      let view = makeView(rendered)
+      let anchor = rendered.model.startPosition
+      let inParagraph = try #require(rendered.model.position(from: anchor, offset: 3))
+      view.selectedTextRange = TextRangeBox(TextRange(start: anchor, end: anchor))
+      view.selectedTextRange = TextRangeBox(TextRange(start: anchor, end: inParagraph))
+
+      // when
+      let topOfCodeBlock = CGPoint(x: region.frame.midX, y: region.frame.minY + 2)
+      let position = try #require(view.closestPosition(to: topOfCodeBlock) as? TextPositionBox)
+
+      // then
+      #expect(position.wrappedValue == rendered.model.endPosition)
+    }
+
+    private func makeView(
+      _ rendered: (model: TextSelectionModel, regions: [OverflowRegion])
+    ) -> UITextInteractionView {
+      UITextInteractionView(
+        model: rendered.model,
+        overflowRegions: rendered.regions,
+        openURL: OpenURLAction { _ in .discarded }
       )
     }
 

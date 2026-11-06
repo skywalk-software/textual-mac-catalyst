@@ -26,10 +26,26 @@
     var selectedTextRange: UITextRange? {
       get { model.selectedRange.map(TextRangeBox.init) }
       set {
-        let rangeBox = newValue as? TextRangeBox
-        model.selectedRange = rangeBox?.wrappedValue
+        let range = (newValue as? TextRangeBox)?.wrappedValue
+        selectionAnchor = range.flatMap { anchor(of: $0, after: model.selectedRange) }
+        model.selectedRange = range
         logger.debug("selectedTextRange = \(newValue)")
       }
+    }
+
+    /// The end of `range` that stayed where it was in `previousRange`, including when a drag
+    /// crosses over it. Nil for a selection that doesn't continue the previous one.
+    private func anchor(of range: TextRange, after previousRange: TextRange?) -> TextPosition? {
+      guard let previousRange else { return nil }
+      guard range != previousRange else { return selectionAnchor }
+
+      if range.start == previousRange.start || range.start == previousRange.end {
+        return range.start
+      }
+      if range.end == previousRange.end || range.end == previousRange.start {
+        return range.end
+      }
+      return nil
     }
 
     var markedTextRange: UITextRange? {
@@ -157,15 +173,37 @@
     }
 
     func closestPosition(to point: CGPoint) -> UITextPosition? {
-      model.closestPosition(to: point).map(TextPositionBox.init)
+      (positionPastOverflowRegion(at: point) ?? model.closestPosition(to: point))
+        .map(TextPositionBox.init)
     }
 
     func closestPosition(to point: CGPoint, within range: UITextRange) -> UITextPosition? {
       guard let rangeBox = range as? TextRangeBox else { return nil }
+      if let position = positionPastOverflowRegion(at: point) {
+        let clamped = min(max(position, rangeBox.wrappedStart), rangeBox.wrappedEnd)
+        return TextPositionBox(clamped)
+      }
       return model.closestPosition(
         to: point,
         within: rangeBox.wrappedValue
       ).map(TextPositionBox.init)
+    }
+
+    /// The position just past the overflow region under `point`, on the far side from the
+    /// selection's anchor, so dragging into a region selects all of it. Without a known anchor,
+    /// the side nearer `point`. Nil when `point` isn't over a region.
+    private func positionPastOverflowRegion(at point: CGPoint) -> TextPosition? {
+      guard let region = overflowRegions.first(where: { $0.frame.contains(point) }) else {
+        return nil
+      }
+
+      let before = model.position(before: region)
+      let after = model.position(after: region)
+
+      if let selectionAnchor {
+        return (selectionAnchor <= before) ? after : before
+      }
+      return (point.y > region.frame.midY) ? after : before
     }
 
     func characterRange(at point: CGPoint) -> UITextRange? {

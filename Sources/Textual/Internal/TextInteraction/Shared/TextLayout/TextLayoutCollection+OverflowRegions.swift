@@ -58,6 +58,21 @@
       return attributedText
     }
 
+    /// The end of the layout above `region`, or the start of the text when no layout is.
+    func position(before region: OverflowRegion) -> TextPosition {
+      let gap = gap(before: region)
+      guard gap > 0 else { return startPosition }
+      let layoutAbove = TextPosition(indexPath: .init(layout: gap - 1), affinity: .downstream)
+      return blockEnd(for: layoutAbove) ?? startPosition
+    }
+
+    /// The start of the layout below `region`, or the end of the text when no layout is.
+    func position(after region: OverflowRegion) -> TextPosition {
+      let gap = gap(before: region)
+      guard gap < layouts.count else { return endPosition }
+      return TextPosition(indexPath: .init(layout: gap), affinity: .downstream)
+    }
+
     /// The index of the first layout below `region`, or the layout count when none is.
     private func gap(before region: OverflowRegion) -> Int {
       layouts.firstIndex { $0.frame.midY > region.frame.midY } ?? layouts.count

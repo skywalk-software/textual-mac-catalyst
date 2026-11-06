@@ -30,6 +30,9 @@
     var overflowRegions: [OverflowRegion]
     var openURL: OpenURLAction
 
+    /// The end of the selection that a drag moves away from, when the last change shows which one.
+    var selectionAnchor: TextPosition?
+
     weak var inputDelegate: (any UITextInputDelegate)?
 
     let logger = Logger(category: .textInteraction)

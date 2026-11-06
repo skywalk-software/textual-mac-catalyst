@@ -9,6 +9,10 @@
   // `TextSelectionModel` for hit testing and range manipulation, and it excludes `overflowRegions`
   // from hit testing so embedded scrollable regions continue to receive input events. A selection
   // that runs past a region copies all of it. Link taps are forwarded to `openURL`.
+  //
+  // TODO: [APP-1367] Known issue: unlike UIKit, macOS doesn't highlight an overflow region that a
+  // selection runs past, and dragging into a region doesn't select it. Subtle only ships through
+  // Mac Catalyst, so this wasn't built.
 
   final class NSTextInteractionView: NSView {
     var model: TextSelectionModel

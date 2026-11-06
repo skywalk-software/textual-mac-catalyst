@@ -113,6 +113,14 @@
       layoutCollection.overflowRegions(regions, in: range)
     }
 
+    func position(before region: OverflowRegion) -> TextPosition {
+      layoutCollection.position(before: region)
+    }
+
+    func position(after region: OverflowRegion) -> TextPosition {
+      layoutCollection.position(after: region)
+    }
+
     func text(in range: TextRange) -> String {
       attributedText(in: range).string
     }
