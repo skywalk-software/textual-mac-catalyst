@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 extension StructuredText {
   /// A proxy for a rendered code block that custom code block styles can use.
@@ -25,14 +24,7 @@ extension StructuredText {
         pasteboard.setString(formatter.html(), forType: .html)
       #elseif TEXTUAL_ENABLE_TEXT_SELECTION && canImport(UIKit)
         let formatter = Formatter(AttributedString(content))
-        UIPasteboard.general.setItems(
-          [
-            [
-              UTType.plainText.identifier: formatter.plainText(),
-              UTType.html.identifier: formatter.html(),
-            ]
-          ]
-        )
+        UIPasteboard.general.setItems(formatter.pasteboardItems())
       #endif
     }
   }
