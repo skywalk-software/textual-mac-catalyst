@@ -94,6 +94,12 @@ extension Text {
         text = text.customAttribute(LinkAttribute(link))
       }
 
+      #if TEXTUAL_ENABLE_TEXT_SELECTION
+        if let intent = run.inlinePresentationIntent, !intent.isEmpty {
+          text = text.customAttribute(InlinePresentationIntentAttribute(intent: intent))
+        }
+      #endif
+
       return text
     }
 
