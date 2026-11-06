@@ -51,12 +51,15 @@
       }
 
       // Clamp the range to stay within the layout boundaries
-      let clampedRange = TextRange(
-        start: max(rawStart, blockRange.start),
-        end: min(rawEnd, blockRange.end)
-      )
+      let start = max(rawStart, blockRange.start)
+      let end = min(rawEnd, blockRange.end)
 
-      return TextRangeBox(clampedRange)
+      // The system tokenizer sees blocks joined, so it can return a word from the neighboring block
+      guard start < end else {
+        return nil
+      }
+
+      return TextRangeBox(TextRange(start: start, end: end))
     }
 
     func isPosition(
