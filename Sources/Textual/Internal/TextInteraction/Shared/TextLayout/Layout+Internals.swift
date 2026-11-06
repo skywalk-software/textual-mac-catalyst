@@ -17,14 +17,18 @@
         .removingIdenticalDuplicates()
 
       // Attachment attributes are replaced by placeholders in the rendering pipeline (see TextFragment)
-      // We need to re-apply them to make them part of the contents during copy operations
+      // and inline presentation intents are dropped. We need to re-apply both to make them part of
+      // the contents during copy operations
       let attributedStrings = layoutAttributedStrings.map { input in
         // Get all the lines in the layout that reference the input
         let lines = zip(self, lineFragments)
           .filter { $1.attributedString === input }
           .map(\.0)
 
-        return input.applyingAttachments(in: lines)
+        return
+          input
+          .applyingAttachments(in: lines)
+          .applyingInlinePresentationIntents(in: lines)
       }
 
       return .init(
@@ -92,6 +96,12 @@
       return characterRanges
     }
 
+    var characterRange: Range<Int>? {
+      guard let ctRun else { return nil }
+      let runRange = CTRunGetStringRange(ctRun)
+      return runRange.location..<(runRange.location + runRange.length)
+    }
+
     var ctRun: CTRun? {
       let mirror = Mirror(reflecting: self)
       guard
@@ -132,6 +142,34 @@
               .textual.presentationIntent, value: presentationIntent, range: NSRange(range))
           }
         }
+      }
+
+      return result
+    }
+
+    fileprivate func applyingInlinePresentationIntents(
+      in lines: [Text.Layout.Line]
+    ) -> NSAttributedString {
+      let styledRuns = lines.flatMap { line in
+        line.compactMap { run -> (intent: InlinePresentationIntent, range: Range<Int>)? in
+          guard let intent = run.inlinePresentationIntent, let range = run.characterRange else {
+            return nil
+          }
+          return (intent, range)
+        }
+      }
+      guard !styledRuns.isEmpty else {
+        return self
+      }
+
+      let result = NSMutableAttributedString(attributedString: self)
+
+      for styledRun in styledRuns {
+        result.addAttribute(
+          .inlinePresentationIntent,
+          value: styledRun.intent.rawValue,
+          range: NSRange(styledRun.range)
+        )
       }
 
       return result
