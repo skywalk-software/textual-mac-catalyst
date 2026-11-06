@@ -1,5 +1,4 @@
 #if TEXTUAL_ENABLE_TEXT_SELECTION && os(iOS) && !targetEnvironment(macCatalyst)
-  import SnapshotTesting
   import SwiftUI
   import Testing
 
@@ -26,18 +25,10 @@
 
     /// Renders `view` and formats all of its text the way Copy does.
     private func copiedHTML(of view: some View) async -> String {
-      var renderedText: [NSAttributedString] = []
-      let capturingView = view.overlayTextLayoutCollection { layoutCollection in
-        renderedText = layoutCollection.layouts.map(\.attributedString)
-        return Color.clear
-      }
-
-      let image = Snapshotting<AnyView, UIImage>
-        .image(layout: .device(config: .iPhoneSe))
-        .snapshot(AnyView(capturingView))
-      await withCheckedContinuation { continuation in
-        image.run { _ in continuation.resume() }
-      }
+      let renderedText =
+        await view.renderOnce { layoutCollection in
+          layoutCollection.layouts.map(\.attributedString)
+        } ?? []
 
       let copiedText = NSMutableAttributedString()
       renderedText.forEach(copiedText.append)
