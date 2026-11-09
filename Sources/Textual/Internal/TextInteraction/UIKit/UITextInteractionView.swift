@@ -27,7 +27,11 @@
     }
 
     var model: TextSelectionModel
-    var overflowRegions: [OverflowRegion]
+    var overflowRegions: [OverflowRegion] {
+      didSet {
+        updateOverflowRegionHighlights()
+      }
+    }
     var openURL: OpenURLAction
 
     /// The end of the selection that a drag moves away from, when the last change shows which one.
@@ -39,6 +43,7 @@
 
     private(set) lazy var _tokenizer = UITextInputStringTokenizer(textInput: self)
     private let selectionInteraction: UITextInteraction
+    private var overflowRegionHighlights: [UIView] = []
 
     init(
       model: TextSelectionModel,
@@ -69,6 +74,35 @@
       return super.point(inside: point, with: event)
     }
 
+    override func tintColorDidChange() {
+      super.tintColorDidChange()
+      updateOverflowRegionHighlights()
+    }
+
+    /// Highlights the overflow regions the selection runs past with plain views. UIKit draws the
+    /// text highlight into one shape layer, and a region as tall as a long code block made that
+    /// layer render at low resolution, shifting the highlight off the text.
+    private func updateOverflowRegionHighlights() {
+      let regions = model.selectedRange.map { model.overflowRegions(overflowRegions, in: $0) } ?? []
+
+      while overflowRegionHighlights.count > regions.count {
+        overflowRegionHighlights.removeLast().removeFromSuperview()
+      }
+      while overflowRegionHighlights.count < regions.count {
+        let highlight = UIView()
+        highlight.isUserInteractionEnabled = false
+        insertSubview(highlight, at: 0)
+        overflowRegionHighlights.append(highlight)
+      }
+
+      // The same color UIKit gives the text highlight
+      let color = tintColor.withAlphaComponent(0.2)
+      for (highlight, region) in zip(overflowRegionHighlights, regions) {
+        highlight.frame = region.frame
+        highlight.backgroundColor = color
+      }
+    }
+
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
       switch action {
       case #selector(copy(_:)), #selector(share(_:)):
@@ -97,6 +131,7 @@
       model.selectionDidChange = { [weak self] in
         guard let self else { return }
         self.inputDelegate?.selectionDidChange(self)
+        self.updateOverflowRegionHighlights()
       }
 
       let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))

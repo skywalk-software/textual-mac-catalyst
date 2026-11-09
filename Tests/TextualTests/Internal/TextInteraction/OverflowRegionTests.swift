@@ -35,10 +35,19 @@
       let range = TextRange(start: rendered.model.startPosition, end: rendered.model.endPosition)
 
       // when
-      let rects = view.selectionRects(for: TextRangeBox(range)).map(\.rect)
+      view.selectedTextRange = TextRangeBox(range)
 
       // then
-      #expect(rects.contains(region.frame))
+      #expect(view.subviews.contains { $0.frame == region.frame })
+      // A region in UIKit's text highlight, which is one shape layer, blurred and shifted it
+      let textRects = view.selectionRects(for: TextRangeBox(range)).map(\.rect)
+      #expect(!textRects.contains(region.frame))
+
+      // when
+      view.selectedTextRange = nil
+
+      // then
+      #expect(!view.subviews.contains { $0.frame == region.frame })
     }
 
     @Test func selectionWithinAParagraphLeavesTheCodeBlockOut() async throws {

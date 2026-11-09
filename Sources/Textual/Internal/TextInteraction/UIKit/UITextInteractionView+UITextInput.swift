@@ -165,10 +165,7 @@
 
     func selectionRects(for range: UITextRange) -> [UITextSelectionRect] {
       guard let rangeBox = range as? TextRangeBox else { return [] }
-      let regionRects = model.overflowRegions(overflowRegions, in: rangeBox.wrappedValue).map {
-        TextSelectionRect(rect: $0.frame, layoutDirection: .leftToRight)
-      }
-      return (model.selectionRects(for: rangeBox.wrappedValue) + regionRects)
+      return model.selectionRects(for: rangeBox.wrappedValue)
         .map(TextSelectionRectBox.init)
     }
 
