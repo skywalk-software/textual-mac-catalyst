@@ -68,7 +68,7 @@
       )
       return UITextInteractionView(
         model: TextSelectionModel(layoutCollection: layoutCollection),
-        exclusionRects: [],
+        overflowRegions: [],
         openURL: OpenURLAction { _ in .discarded }
       )
     }

@@ -71,6 +71,11 @@ public struct Overflow<Content: View>: View {
             }
             // Make text selection local in scrollable regions
             .modifier(TextSelectionInteraction())
+            // Keep the text for a parent selection that runs past this region
+            .overlayPreferenceValue(Text.LayoutKey.self) { value in
+              Color.clear
+                .preference(key: OverflowTextLayoutKey.self, value: value.map(\.layout))
+            }
             .transformPreference(Text.LayoutKey.self) { value in
               value = []
             }
@@ -79,16 +84,19 @@ public struct Overflow<Content: View>: View {
       .onScrollGeometryChange(for: CGFloat.self, of: \.containerSize.width) {
         containerWidth = $1
       }
-      // Propagate gesture exclusion area
-      .background(
+      // Propagate the gesture exclusion area along with the region's text
+      .backgroundPreferenceValue(OverflowTextLayoutKey.self) { layouts in
         GeometryReader { geometry in
           Color.clear
             .preference(
-              key: OverflowFrameKey.self,
-              value: [geometry.frame(in: .textContainer)]
+              key: OverflowRegionKey.self,
+              value: [OverflowRegion(frame: geometry.frame(in: .textContainer), layouts: layouts)]
             )
         }
-      )
+      }
+      .transformPreference(OverflowTextLayoutKey.self) { value in
+        value = []
+      }
     }
   }
 }

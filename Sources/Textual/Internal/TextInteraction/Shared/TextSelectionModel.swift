@@ -102,6 +102,25 @@
       layoutCollection.attributedText(in: range)
     }
 
+    func attributedText(
+      in range: TextRange,
+      including overflowRegions: [OverflowRegion]
+    ) -> NSAttributedString {
+      layoutCollection.attributedText(in: range, including: overflowRegions)
+    }
+
+    func overflowRegions(_ regions: [OverflowRegion], in range: TextRange) -> [OverflowRegion] {
+      layoutCollection.overflowRegions(regions, in: range)
+    }
+
+    func position(before region: OverflowRegion) -> TextPosition {
+      layoutCollection.position(before: region)
+    }
+
+    func position(after region: OverflowRegion) -> TextPosition {
+      layoutCollection.position(after: region)
+    }
+
     func text(in range: TextRange) -> String {
       attributedText(in: range).string
     }

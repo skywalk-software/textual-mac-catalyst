@@ -26,8 +26,8 @@
         // We need the selection model at text fragment level for the
         // text selection background and selected attachment dimming
         .environment(model)
-        .overlayPreferenceValue(OverflowFrameKey.self) { frames in
-          AppKitTextInteractionOverlay(model: model, overflowFrames: frames)
+        .overlayPreferenceValue(OverflowRegionKey.self) { regions in
+          AppKitTextInteractionOverlay(model: model, overflowRegions: regions)
             .onContinuousHover { phase in
               updateCursor(for: phase, model: model)
             }

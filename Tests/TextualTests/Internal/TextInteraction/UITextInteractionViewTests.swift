@@ -57,7 +57,7 @@
       model.selectedRange = TextRange(start: model.startPosition, end: model.endPosition)
       let view = UITextInteractionView(
         model: model,
-        exclusionRects: [],
+        overflowRegions: [],
         openURL: OpenURLAction { _ in .discarded }
       )
       window.addSubview(view)

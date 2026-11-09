@@ -8,7 +8,8 @@
   //
   // The view sits in an overlay above one or more rendered `Text` fragments. It uses
   // `TextSelectionModel` to translate touch locations into URLs and selection ranges, and it
-  // respects `exclusionRects` so embedded scrollable regions can continue to handle gestures.
+  // excludes `overflowRegions` from hit-testing so embedded scrollable regions can continue to
+  // handle gestures. A selection that runs past a region copies and highlights all of it.
   // Selection UI is provided by `UITextInteraction` configured for non-editable content.
 
   final class UITextInteractionView: UIView {
@@ -26,8 +27,15 @@
     }
 
     var model: TextSelectionModel
-    var exclusionRects: [CGRect]
+    var overflowRegions: [OverflowRegion] {
+      didSet {
+        updateOverflowRegionHighlights()
+      }
+    }
     var openURL: OpenURLAction
+
+    /// The end of the selection that a drag moves away from, when the last change shows which one.
+    var selectionAnchor: TextPosition?
 
     weak var inputDelegate: (any UITextInputDelegate)?
 
@@ -35,14 +43,15 @@
 
     private(set) lazy var _tokenizer = UITextInputStringTokenizer(textInput: self)
     private let selectionInteraction: UITextInteraction
+    private var overflowRegionHighlights: [UIView] = []
 
     init(
       model: TextSelectionModel,
-      exclusionRects: [CGRect],
+      overflowRegions: [OverflowRegion],
       openURL: OpenURLAction
     ) {
       self.model = model
-      self.exclusionRects = exclusionRects
+      self.overflowRegions = overflowRegions
       self.openURL = openURL
       self.selectionInteraction = UITextInteraction(for: .nonEditable)
 
@@ -57,12 +66,41 @@
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-      for exclusionRect in exclusionRects {
-        if exclusionRect.contains(point) {
+      for overflowRegion in overflowRegions {
+        if overflowRegion.frame.contains(point) {
           return false
         }
       }
       return super.point(inside: point, with: event)
+    }
+
+    override func tintColorDidChange() {
+      super.tintColorDidChange()
+      updateOverflowRegionHighlights()
+    }
+
+    /// Highlights the overflow regions the selection runs past with plain views. UIKit draws the
+    /// text highlight into one shape layer, and a region as tall as a long code block made that
+    /// layer render at low resolution, shifting the highlight off the text.
+    private func updateOverflowRegionHighlights() {
+      let regions = model.selectedRange.map { model.overflowRegions(overflowRegions, in: $0) } ?? []
+
+      while overflowRegionHighlights.count > regions.count {
+        overflowRegionHighlights.removeLast().removeFromSuperview()
+      }
+      while overflowRegionHighlights.count < regions.count {
+        let highlight = UIView()
+        highlight.isUserInteractionEnabled = false
+        insertSubview(highlight, at: 0)
+        overflowRegionHighlights.append(highlight)
+      }
+
+      // The same color UIKit gives the text highlight
+      let color = tintColor.withAlphaComponent(0.2)
+      for (highlight, region) in zip(overflowRegionHighlights, regions) {
+        highlight.frame = region.frame
+        highlight.backgroundColor = color
+      }
     }
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
@@ -79,7 +117,7 @@
         return
       }
 
-      let attributedText = model.attributedText(in: selectedRange)
+      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
       let formatter = Formatter(attributedText)
 
       UIPasteboard.general.setItems(formatter.pasteboardItems())
@@ -93,6 +131,7 @@
       model.selectionDidChange = { [weak self] in
         guard let self else { return }
         self.inputDelegate?.selectionDidChange(self)
+        self.updateOverflowRegionHighlights()
       }
 
       let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
@@ -127,7 +166,7 @@
         return
       }
 
-      let attributedText = model.attributedText(in: selectedRange)
+      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
       let itemSource = TextActivityItemSource(attributedString: attributedText)
 
       let activityViewController = UIActivityViewController(
