@@ -15,8 +15,8 @@
     }
 
     func text(in range: UITextRange) -> String? {
-      guard let rangeBox = range as? TextRangeBox else { return nil }
-      return model.text(in: rangeBox.wrappedValue)
+      guard let range = validRange(range) else { return nil }
+      return model.text(in: range)
     }
 
     func replace(_ range: UITextRange, withText text: String) {
@@ -26,7 +26,7 @@
     var selectedTextRange: UITextRange? {
       get { model.selectedRange.map(TextRangeBox.init) }
       set {
-        let range = (newValue as? TextRangeBox)?.wrappedValue
+        let range = validRange(newValue)
         selectionAnchor = range.flatMap { anchor(of: $0, after: model.selectedRange) }
         model.selectedRange = range
         logger.debug("selectedTextRange = \(newValue)")
@@ -87,9 +87,9 @@
     }
 
     func position(from position: UITextPosition, offset: Int) -> UITextPosition? {
-      guard let positionBox = position as? TextPositionBox else { return nil }
+      guard let position = validPosition(position) else { return nil }
       return model.position(
-        from: positionBox.wrappedValue,
+        from: position,
         offset: offset
       ).map(TextPositionBox.init)
     }
@@ -115,10 +115,10 @@
 
     func offset(from fromPosition: UITextPosition, to toPosition: UITextPosition) -> Int {
       guard
-        let from = fromPosition as? TextPositionBox,
-        let to = toPosition as? TextPositionBox
+        let from = validPosition(fromPosition),
+        let to = validPosition(toPosition)
       else { return 0 }
-      return model.offset(from: from.wrappedValue, to: to.wrappedValue)
+      return model.offset(from: from, to: to)
     }
 
     var tokenizer: any UITextInputTokenizer {
@@ -154,18 +154,18 @@
     }
 
     func firstRect(for range: UITextRange) -> CGRect {
-      guard let rangeBox = range as? TextRangeBox else { return .zero }
-      return model.firstRect(for: rangeBox.wrappedValue)
+      guard let range = validRange(range) else { return .zero }
+      return model.firstRect(for: range)
     }
 
     func caretRect(for position: UITextPosition) -> CGRect {
-      guard let positionBox = position as? TextPositionBox else { return .zero }
-      return model.caretRect(for: positionBox.wrappedValue)
+      guard let position = validPosition(position) else { return .zero }
+      return model.caretRect(for: position)
     }
 
     func selectionRects(for range: UITextRange) -> [UITextSelectionRect] {
-      guard let rangeBox = range as? TextRangeBox else { return [] }
-      return model.selectionRects(for: rangeBox.wrappedValue)
+      guard let range = validRange(range) else { return [] }
+      return model.selectionRects(for: range)
         .map(TextSelectionRectBox.init)
     }
 
@@ -216,8 +216,8 @@
     }
 
     func attributedText(in range: UITextRange) -> NSAttributedString {
-      guard let rangeBox = range as? TextRangeBox else { return .init() }
-      return model.attributedText(in: rangeBox.wrappedValue)
+      guard let range = validRange(range) else { return .init() }
+      return model.attributedText(in: range)
     }
   }
 #endif

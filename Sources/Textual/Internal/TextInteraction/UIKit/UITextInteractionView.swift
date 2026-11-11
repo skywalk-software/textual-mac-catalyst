@@ -103,6 +103,33 @@
       }
     }
 
+    /// The position in `position`, or nil when this view's text has no such position.
+    ///
+    /// UIKit keeps positions and ranges after the text they were made for changes, and has passed
+    /// this view a position that its text is too short for. Looking up such a position's text or
+    /// rectangle reads past the end of an array, which stops the app.
+    func validPosition(_ position: UITextPosition) -> TextPosition? {
+      guard
+        let position = (position as? TextPositionBox)?.wrappedValue,
+        model.contains(position)
+      else {
+        return nil
+      }
+      return position
+    }
+
+    /// The range in `range`, or nil when either end isn't a position in this view's text.
+    func validRange(_ range: UITextRange?) -> TextRange? {
+      guard
+        let rangeBox = range as? TextRangeBox,
+        model.contains(rangeBox.wrappedStart),
+        model.contains(rangeBox.wrappedEnd)
+      else {
+        return nil
+      }
+      return rangeBox.wrappedValue
+    }
+
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
       switch action {
       case #selector(copy(_:)), #selector(share(_:)):
