@@ -98,6 +98,10 @@
       layoutCollection.endPosition
     }
 
+    func contains(_ position: TextPosition) -> Bool {
+      layoutCollection.contains(position)
+    }
+
     func attributedText(in range: TextRange) -> NSAttributedString {
       layoutCollection.attributedText(in: range)
     }

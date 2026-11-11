@@ -28,6 +28,27 @@
       )
     }
 
+    /// Whether `position` names a run slice of this collection. A position made for other text,
+    /// or for this text before it changed, may not.
+    func contains(_ position: TextPosition) -> Bool {
+      let indexPath = position.indexPath
+
+      guard indexPath.count == 4, layouts.indices.contains(indexPath.layout) else {
+        return false
+      }
+      let lines = layouts[indexPath.layout].lines
+
+      guard lines.indices.contains(indexPath.line) else {
+        return false
+      }
+      let runs = lines[indexPath.line].runs
+
+      guard runs.indices.contains(indexPath.run) else {
+        return false
+      }
+      return runs[indexPath.run].slices.indices.contains(indexPath.runSlice)
+    }
+
     func position(from position: TextPosition, offset: Int) -> TextPosition? {
       let from = characterIndex(at: position)
       let target = from + offset

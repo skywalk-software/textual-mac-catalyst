@@ -69,12 +69,10 @@
     ) -> Bool {
       guard
         granularity == .word || granularity == .sentence,
-        let positionBox = position as? TextPositionBox
+        let rawPosition = validPosition(position)
       else {
         return _tokenizer.isPosition(position, atBoundary: granularity, inDirection: direction)
       }
-
-      let rawPosition = positionBox.wrappedValue
 
       if model.isPositionAtBlockBoundary(rawPosition) {
         return true
@@ -143,12 +141,10 @@
     ) -> Bool {
       guard
         granularity == .word || granularity == .sentence,
-        let positionBox = position as? TextPositionBox
+        let rawPosition = validPosition(position)
       else {
         return _tokenizer.isPosition(position, withinTextUnit: granularity, inDirection: direction)
       }
-
-      let rawPosition = positionBox.wrappedValue
 
       // If we're at a block boundary, extending in the direction
       // that crosses the boundary would leave the text unit
