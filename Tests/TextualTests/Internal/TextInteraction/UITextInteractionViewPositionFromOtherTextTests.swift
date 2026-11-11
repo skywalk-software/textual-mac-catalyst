@@ -8,11 +8,29 @@
   // APP-1416: UIKit passed the view a position that its text has no run slice for, and looking up
   // that position's rectangle stopped the app.
   @MainActor
-  struct UITextInteractionViewForeignPositionTests {
+  struct UITextInteractionViewPositionFromOtherTextTests {
     @Test func caretRectIsZeroForAPositionFromOtherText() throws {
       // given
       let view = try makeView(fixtureName: "empty")
       let position = try positionInSecondParagraph()
+
+      // when
+      let caretRect = view.caretRect(for: position)
+
+      // then
+      #expect(caretRect == .zero)
+    }
+
+    @Test(arguments: [
+      IndexPath(runSlice: 0, run: 0, line: 0, layout: 2),
+      IndexPath(runSlice: 0, run: 0, line: 99, layout: 1),
+      IndexPath(runSlice: 0, run: 99, line: 0, layout: 1),
+      IndexPath(runSlice: 99, run: 0, line: 0, layout: 1),
+    ])
+    func caretRectIsZeroForAPositionPastTheEndOfLongerText(indexPath: IndexPath) throws {
+      // given
+      let view = try makeView(fixtureName: "two-paragraphs-bidi")
+      let position = TextPositionBox(TextPosition(indexPath: indexPath, affinity: .downstream))
 
       // when
       let caretRect = view.caretRect(for: position)
@@ -31,6 +49,7 @@
       #expect(view.selectionRects(for: range).isEmpty)
       #expect(view.text(in: range) == nil)
       #expect(view.attributedText(in: range).length == 0)
+      #expect(view.closestPosition(to: .zero, within: range) == nil)
     }
 
     @Test func positionFromOtherTextHasNoOffsetOrBoundary() throws {
@@ -78,7 +97,7 @@
 
     private func positionInSecondParagraph() throws -> TextPositionBox {
       let model = try TextSelectionModel(fixtureName: "two-paragraphs-bidi")
-      #expect(model.endPosition.indexPath.layout == 1)
+      try #require(model.endPosition.indexPath.layout == 1)
       return TextPositionBox(model.endPosition)
     }
 

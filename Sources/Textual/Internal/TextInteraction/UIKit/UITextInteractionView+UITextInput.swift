@@ -175,14 +175,14 @@
     }
 
     func closestPosition(to point: CGPoint, within range: UITextRange) -> UITextPosition? {
-      guard let rangeBox = range as? TextRangeBox else { return nil }
+      guard let range = validRange(range) else { return nil }
       if let position = positionPastOverflowRegion(at: point) {
-        let clamped = min(max(position, rangeBox.wrappedStart), rangeBox.wrappedEnd)
+        let clamped = min(max(position, range.start), range.end)
         return TextPositionBox(clamped)
       }
       return model.closestPosition(
         to: point,
-        within: rangeBox.wrappedValue
+        within: range
       ).map(TextPositionBox.init)
     }
 
