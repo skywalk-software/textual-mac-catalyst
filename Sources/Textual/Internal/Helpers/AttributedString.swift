@@ -16,6 +16,15 @@ extension AttributedStringProtocol {
       .trimmingCharacters(in: .whitespacesAndNewlines) == "\u{FFFC}"
   }
 
+  /// A code block's text without the line break that ends its last line, which isn't drawn.
+  func droppingCodeBlockLineBreak() -> AttributedSubstring {
+    let text = self[startIndex..<endIndex]
+    guard let last = text.characters.indices.last, text.characters[last] == "\n" else {
+      return text
+    }
+    return text[..<last]
+  }
+
   func attachments() -> Set<AnyAttachment> {
     uniqueValues(for: \.textual.attachment)
   }

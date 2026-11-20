@@ -90,7 +90,8 @@ extension InlinePresentationIntent {
 }
 
 extension PresentationIntent {
-  fileprivate var isPreformatted: Bool {
+  /// Whether the text is in a code block.
+  var isPreformatted: Bool {
     components.first?.kind.isPreformatted ?? false
   }
 }

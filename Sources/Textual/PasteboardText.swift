@@ -19,7 +19,7 @@ public struct PasteboardText {
   @MainActor
   public init(_ markup: String, parser: any MarkupParser) throws {
     let attributedString = try parser.attributedString(for: markup)
-    formatter = Formatter(attributedString.removingCodeBlockLastLineBreaks())
+    formatter = Formatter(attributedString.removingCodeBlockLineBreaks())
   }
 
   /// The text with no styles, the way Copy writes it for apps that take only plain text.
@@ -41,29 +41,13 @@ public struct PasteboardText {
 extension AttributedString {
   /// The text without the line break at the end of each code block, which `CodeBlock` doesn't draw,
   /// so it isn't in the text that Copy takes from the view either.
-  fileprivate func removingCodeBlockLastLineBreaks() -> AttributedString {
-    var text = self
-    let lineBreakOffsets = runs[\.presentationIntent].compactMap { intent, range -> Int? in
-      guard
-        intent?.components.contains(where: \.kind.isCodeBlock) == true,
-        let last = characters[range].indices.last, characters[last] == "\n"
-      else {
-        return nil
-      }
-      return characters.distance(from: characters.startIndex, to: last)
-    }
-    for offset in lineBreakOffsets.reversed() {
-      let lineBreak = text.characters.index(text.characters.startIndex, offsetBy: offset)
-      text.characters.remove(at: lineBreak)
+  fileprivate func removingCodeBlockLineBreaks() -> AttributedString {
+    var text = AttributedString()
+    for (intent, range) in runs[\.presentationIntent] {
+      let block = self[range]
+      text.append((intent?.isPreformatted == true) ? block.droppingCodeBlockLineBreak() : block)
     }
     return text
-  }
-}
-
-extension PresentationIntent.Kind {
-  fileprivate var isCodeBlock: Bool {
-    guard case .codeBlock = self else { return false }
-    return true
   }
 }
 
