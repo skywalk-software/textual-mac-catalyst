@@ -219,5 +219,19 @@
       guard let range = validRange(range) else { return .init() }
       return model.attributedText(in: range)
     }
+
+    /// Adds Copy as Markdown to the menu over a selection, after the Copy it belongs with.
+    func editMenu(for textRange: UITextRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
+      guard !textRange.isEmpty else { return nil }
+
+      var actions = suggestedActions
+      let standardEdit = actions.firstIndex { ($0 as? UIMenu)?.identifier == .standardEdit }
+      let copyAsMarkdown = UICommand(
+        title: "Copy as Markdown",
+        action: #selector(copyAsMarkdown(_:))
+      )
+      actions.insert(copyAsMarkdown, at: standardEdit.map { $0 + 1 } ?? actions.count)
+      return UIMenu(children: actions)
+    }
   }
 #endif

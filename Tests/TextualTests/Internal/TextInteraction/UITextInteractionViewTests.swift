@@ -43,6 +43,33 @@
       #expect(model.selectedRange == nil)
     }
 
+    @Test
+    func copyAsMarkdownIsOfferedWhileTextIsSelected() throws {
+      // given
+      let window = makeWindow()
+      defer { window.isHidden = true }
+      let (view, model) = try makeSelectedView(in: window)
+      let copyAsMarkdown = #selector(UITextInteractionView.copyAsMarkdown(_:))
+      let standardEdit = UIMenu(identifier: .standardEdit, options: .displayInline, children: [])
+
+      // when
+      let menu = view.editMenu(
+        for: try #require(view.selectedTextRange),
+        suggestedActions: [standardEdit]
+      )
+
+      // then
+      #expect(view.canPerformAction(copyAsMarkdown, withSender: nil))
+      #expect(menu?.children.map(\.title) == ["", "Copy as Markdown"])
+      #expect((menu?.children.last as? UICommand)?.action == copyAsMarkdown)
+
+      // when
+      model.selectedRange = nil
+
+      // then
+      #expect(!view.canPerformAction(copyAsMarkdown, withSender: nil))
+    }
+
     private func makeWindow() -> UIWindow {
       let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
       window.makeKeyAndVisible()

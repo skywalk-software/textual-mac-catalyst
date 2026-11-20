@@ -132,7 +132,7 @@
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
       switch action {
-      case #selector(copy(_:)), #selector(share(_:)):
+      case #selector(copy(_:)), #selector(share(_:)), #selector(copyAsMarkdown(_:)):
         return !(model.selectedRange?.isCollapsed ?? true)
       default:
         return false
@@ -148,6 +148,20 @@
       let formatter = Formatter(attributedText)
 
       UIPasteboard.general.setItems(formatter.pasteboardItems())
+    }
+
+    /// Copies the selection as Markdown. The menu over a selection has an item for it, and an
+    /// app can give a menu item of its own this action: the view that has the keyboard focus
+    /// answers it.
+    @objc func copyAsMarkdown(_ sender: Any?) {
+      guard let selectedRange = model.selectedRange else {
+        return
+      }
+
+      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
+      let formatter = Formatter(attributedText)
+
+      UIPasteboard.general.setItems(formatter.markdownPasteboardItems())
     }
 
     private func setUp() {
