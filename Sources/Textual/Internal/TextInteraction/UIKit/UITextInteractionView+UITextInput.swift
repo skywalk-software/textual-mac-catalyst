@@ -226,8 +226,9 @@
 
       var actions = suggestedActions
       let standardEdit = actions.firstIndex { ($0 as? UIMenu)?.identifier == .standardEdit }
+      // The package has no strings of its own, so an app can translate this in its own.
       let copyAsMarkdown = UICommand(
-        title: "Copy as Markdown",
+        title: NSLocalizedString("Copy as Markdown", bundle: .main, comment: ""),
         action: #selector(copyAsMarkdown(_:))
       )
       actions.insert(copyAsMarkdown, at: standardEdit.map { $0 + 1 } ?? actions.count)

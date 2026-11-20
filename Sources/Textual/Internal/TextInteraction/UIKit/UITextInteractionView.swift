@@ -140,28 +140,25 @@
     }
 
     override func copy(_ sender: Any?) {
-      guard let selectedRange = model.selectedRange else {
+      guard let selectedAttributedText else {
         return
       }
-
-      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
-      let formatter = Formatter(attributedText)
-
-      UIPasteboard.general.setItems(formatter.pasteboardItems())
+      UIPasteboard.general.setItems(Formatter(selectedAttributedText).pasteboardItems())
     }
 
     /// Copies the selection as Markdown. The menu over a selection has an item for it, and an
     /// app can give a menu item of its own this action: the view that has the keyboard focus
     /// answers it.
     @objc func copyAsMarkdown(_ sender: Any?) {
-      guard let selectedRange = model.selectedRange else {
+      guard let selectedAttributedText else {
         return
       }
+      UIPasteboard.general.setItems(Formatter(selectedAttributedText).markdownPasteboardItems())
+    }
 
-      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
-      let formatter = Formatter(attributedText)
-
-      UIPasteboard.general.setItems(formatter.markdownPasteboardItems())
+    /// The selected text, with the whole of each scrolling code block or table it runs past.
+    private var selectedAttributedText: NSAttributedString? {
+      model.selectedRange.map { model.attributedText(in: $0, including: overflowRegions) }
     }
 
     private func setUp() {
@@ -203,12 +200,11 @@
     }
 
     @objc private func share(_ sender: Any?) {
-      guard let selectedRange = model.selectedRange else {
+      guard let selectedRange = model.selectedRange, let selectedAttributedText else {
         return
       }
 
-      let attributedText = model.attributedText(in: selectedRange, including: overflowRegions)
-      let itemSource = TextActivityItemSource(attributedString: attributedText)
+      let itemSource = TextActivityItemSource(attributedString: selectedAttributedText)
 
       let activityViewController = UIActivityViewController(
         activityItems: [itemSource],

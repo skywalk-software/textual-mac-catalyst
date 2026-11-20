@@ -66,7 +66,11 @@ extension Formatter.InlineNode {
       // so the markers of a styled run close ahead of it.
       return [.init(text: "\\\n", link: link)]
     case .attachment(let attachment):
-      return [.init(text: attachment.description, styles: styles, link: link)]
+      // Math keeps its dollar signs; any other attachment writes text, like an image's alt text.
+      let text =
+        (attachment.base is MathAttachment)
+        ? attachment.description : attachment.description.escapingMarkdownSymbols()
+      return [.init(text: text, styles: styles, link: link)]
     }
   }
 }
@@ -81,7 +85,7 @@ extension Array where Element == Formatter.InlineNode {
       let end = runs[index...].firstIndex { $0.link != link } ?? runs.count
       let text = runs[index..<end].renderStyledMarkdown()
       if let link {
-        result += "[\(text)](\(link.absoluteString))"
+        result += "[\(text)](\(link.markdownLinkDestination))"
       } else {
         result += text
       }
@@ -129,26 +133,48 @@ extension ArraySlice where Element == MarkdownRun {
 // MARK: - Block rendering
 
 extension Formatter.BlockNode {
-  fileprivate var isList: Bool {
+  /// Whether a list in a list item can go right under the item's text. A numbered list can start
+  /// right under text only when it starts at 1.
+  fileprivate var canFollowTextDirectly: Bool {
     switch self {
-    case .orderedList, .unorderedList:
+    case .unorderedList:
+      return true
+    case .orderedList(let children):
+      return children.first?.ordinal == 1
+    default:
+      return false
+    }
+  }
+
+  fileprivate func isSameKindOfList(as other: Self) -> Bool {
+    switch (self, other) {
+    case (.orderedList, .orderedList), (.unorderedList, .unorderedList):
       return true
     default:
       return false
     }
   }
 
-  fileprivate func renderMarkdown() -> String {
+  /// The block as Markdown. A list with `usesSecondMarker` set uses `*` or `)` instead of `-` or
+  /// `.`, so it doesn't carry on a list of the same kind right above it.
+  fileprivate func renderMarkdown(usesSecondMarker: Bool = false) -> String {
     switch self {
     case .paragraph(let children):
-      return children.renderMarkdown().escapingMarkdownBlockStart()
+      // Each line after a line break can start a block too.
+      return children.renderMarkdown()
+        .split(separator: "\n", omittingEmptySubsequences: false)
+        .map { String($0).escapingMarkdownBlockStart() }
+        .joined(separator: "\n")
     case .header(let level, let children):
-      return String(repeating: "#", count: level) + " " + children.renderMarkdown()
+      return String(repeating: "#", count: level) + " "
+        + children.renderMarkdown().escapingClosingNumberSigns()
     case .orderedList(let children):
-      return children.map { $0.renderMarkdown(marker: "\($0.ordinal). ") }
+      let delimiter = (usesSecondMarker) ? ")" : "."
+      return children.map { $0.renderMarkdown(marker: "\($0.ordinal)\(delimiter) ") }
         .joined(separator: "\n")
     case .unorderedList(let children):
-      return children.map { $0.renderMarkdown(marker: "- ") }.joined(separator: "\n")
+      let marker = (usesSecondMarker) ? "* " : "- "
+      return children.map { $0.renderMarkdown(marker: marker) }.joined(separator: "\n")
     case .codeBlock(let languageHint, let code):
       // A fence longer than any run of backticks in the code, so none of them ends the block.
       let fence = String(repeating: "`", count: Swift.max(3, code.longestBacktickRun() + 1))
@@ -168,8 +194,19 @@ extension Formatter.BlockNode {
 }
 
 extension Array where Element == Formatter.BlockNode {
-  fileprivate func renderMarkdown() -> String {
-    self.map { $0.renderMarkdown() }.joined(separator: "\n\n")
+  /// The blocks with an empty line between them. In a list item, a list that can go right under
+  /// the item's text goes there instead.
+  fileprivate func renderMarkdown(isInListItem: Bool = false) -> String {
+    var result = ""
+    var usesSecondMarker = false
+    for (index, block) in self.enumerated() {
+      if index > 0 {
+        usesSecondMarker = block.isSameKindOfList(as: self[index - 1]) && !usesSecondMarker
+        result += (isInListItem && block.canFollowTextDirectly) ? "\n" : "\n\n"
+      }
+      result += block.renderMarkdown(usesSecondMarker: usesSecondMarker)
+    }
+    return result
   }
 }
 
@@ -177,16 +214,9 @@ extension Array where Element == Formatter.BlockNode {
 
 extension Formatter.ListItem {
   /// The item with `marker` ahead of its first line and the lines after it indented to the
-  /// marker's width, which is what keeps them in the item. A list nested in the item goes right
-  /// under the text above it; any other block needs an empty line ahead of it.
+  /// marker's width, which is what keeps them in the item.
   fileprivate func renderMarkdown(marker: String) -> String {
-    var content = ""
-    for (index, block) in blocks.enumerated() {
-      if index > 0 {
-        content += block.isList ? "\n" : "\n\n"
-      }
-      content += block.renderMarkdown()
-    }
+    let content = blocks.renderMarkdown(isInListItem: true)
 
     let indentation = String(repeating: " ", count: marker.count)
     let lines = content.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
@@ -251,8 +281,17 @@ extension String {
     while let character = rest.first {
       rest = rest.dropFirst()
       switch character {
-      case "\\", "`", "*", "[", "]":
+      case "\\", "`", "*", "[", "]", "~":
         result.append("\\")
+      case "<":
+        // Ahead of a letter or one of these, it would start HTML or an address in angle brackets.
+        if let next = rest.first, next.isLetter || "/!?".contains(next) {
+          result.append("\\")
+        }
+      case "&":
+        if rest.startsCharacterReference {
+          result.append("\\")
+        }
       case "_":
         let isInsideWord =
           (previous?.isLetter == true || previous?.isNumber == true)
@@ -269,28 +308,50 @@ extension String {
     return result
   }
 
-  /// A paragraph whose first characters would make it a heading, a quote or a list item, with
-  /// a backslash that keeps it a paragraph.
+  /// A line of a paragraph whose first characters would make it a heading, a quote, a list item
+  /// or a divider, or turn the line above into a heading, with a backslash that keeps it text.
   fileprivate func escapingMarkdownBlockStart() -> String {
     if self.hasPrefix("#") || self.hasPrefix(">") {
       return "\\" + self
     }
-    if self.hasPrefix("- ") || self.hasPrefix("+ ") {
+    if self == "-" || self == "+" || self.hasPrefix("- ") || self.hasPrefix("+ ") {
+      return "\\" + self
+    }
+    if self.contains(where: { $0 == "-" || $0 == "=" }),
+      self.allSatisfy({ $0 == "-" || $0 == "=" || $0 == " " })
+    {
       return "\\" + self
     }
     let digits = self.prefix(while: \.isNumber)
     let afterDigits = self.dropFirst(digits.count)
-    if !digits.isEmpty, afterDigits.hasPrefix(". ") || afterDigits.hasPrefix(") ") {
+    if !digits.isEmpty, afterDigits == "." || afterDigits == ")" || afterDigits.hasPrefix(". ")
+      || afterDigits.hasPrefix(") ")
+    {
       return String(digits) + "\\" + afterDigits
     }
     return self
   }
 
+  /// A heading's text with a backslash ahead of number signs at its end, which Markdown would
+  /// otherwise read as an optional closing sequence and drop.
+  fileprivate func escapingClosingNumberSigns() -> String {
+    let numberSigns = self.reversed().prefix { $0 == "#" }
+    guard !numberSigns.isEmpty else { return self }
+
+    let start = self.dropLast(numberSigns.count)
+    guard start.isEmpty || start.last == " " || start.last == "\t" else { return self }
+    return String(start) + "\\" + String(numberSigns)
+  }
+
   /// The code between backticks: more of them than the code has in a row, and a space on each
-  /// side when the code starts or ends with one.
+  /// side when the code starts or ends with a backtick or has a space at both ends.
   fileprivate func markdownCodeSpan() -> String {
     let fence = String(repeating: "`", count: longestBacktickRun() + 1)
-    let padding = (self.hasPrefix("`") || self.hasSuffix("`")) ? " " : ""
+    // Markdown takes one space off each end of code that has one at both ends.
+    let hasSpacesAtBothEnds =
+      self.hasPrefix(" ") && self.hasSuffix(" ") && !self.allSatisfy { $0 == " " }
+    let needsPadding = self.hasPrefix("`") || self.hasSuffix("`") || hasSpacesAtBothEnds
+    let padding = (needsPadding) ? " " : ""
     return fence + padding + self + padding + fence
   }
 
@@ -302,5 +363,32 @@ extension String {
       longest = Swift.max(longest, current)
     }
     return longest
+  }
+}
+
+extension Substring {
+  /// Whether the text starts with the name or number of a character reference, like `copy;`
+  /// or `#169;`, so an `&` ahead of it would be read as that character.
+  fileprivate var startsCharacterReference: Bool {
+    let name = self.prefix { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "#") }
+    return !name.isEmpty && self.dropFirst(name.count).first == ";"
+  }
+}
+
+extension URL {
+  /// The address for a link, in angle brackets when its parentheses don't pair up, since an
+  /// unpaired `)` would end the link early.
+  fileprivate var markdownLinkDestination: String {
+    let address = absoluteString
+    var depth = 0
+    for character in address {
+      if character == "(" {
+        depth += 1
+      } else if character == ")" {
+        depth -= 1
+        if depth < 0 { break }
+      }
+    }
+    return (depth == 0) ? address : "<\(address)>"
   }
 }
