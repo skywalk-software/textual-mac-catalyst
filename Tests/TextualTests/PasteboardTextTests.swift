@@ -75,6 +75,22 @@ struct PasteboardTextTests {
       #expect(text.plainText == Formatter(rendered).plainText())
     }
 
+    // APP-1556: a math block drawn from a math code block had no block intent, so Copy left the
+    // formula out of a selection that ran across it.
+    @Test func copyOfSelectedTextKeepsAMathBlock() async throws {
+      // given
+      let markdown = "Above\n\n```math\nx^2\n```\n\nBelow"
+      let rendered = try await renderedText(of: StructuredText(markdown: markdown))
+
+      // when
+      let html = Formatter(rendered).html()
+
+      // then
+      #expect(
+        html == "<p>Above</p>\n<pre><code class=\"language-math\">x^2</code></pre>\n<p>Below</p>")
+      #expect(html == (try PasteboardText(markdown, parser: .markdown())).html)
+    }
+
     /// Renders `view` and returns what Copy takes when all of its text is selected.
     private func renderedText(of view: some View) async throws -> NSAttributedString {
       var regions: [OverflowRegion] = []

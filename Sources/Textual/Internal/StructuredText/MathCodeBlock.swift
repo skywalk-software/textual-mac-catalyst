@@ -12,10 +12,10 @@ extension StructuredText {
       let latex = String(content.characters[...])
         .trimmingCharacters(in: .whitespacesAndNewlines)
       let attachment = MathAttachment(latex: latex, style: .block)
-      self.content = AttributedString(
-        "\u{FFFC}",
-        attributes: AttributeContainer().attachment(.init(attachment))
-      )
+      // The code block's intent goes with the formula, or Copy leaves it out of a selection.
+      var attributes = AttributeContainer().attachment(.init(attachment))
+      attributes.presentationIntent = content.presentationIntent
+      self.content = AttributedString("\u{FFFC}", attributes: attributes)
       self.indentationLevel = content.presentationIntent?.indentationLevel ?? 0
     }
 

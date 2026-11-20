@@ -474,6 +474,43 @@ struct HTMLFormatterTests {
     #expect(result == expected)
   }
 
+  // APP-1556: the parser writes nothing for an empty cell, so the cells after it moved one column
+  // left in copied tables.
+  @Test func emptyCellKeepsTheOtherCellsInTheirColumns() throws {
+    // given
+    let formatter = try Formatter(
+      NSAttributedString(
+        markdown: """
+          | Name | Count | Note |
+          | --- | --- | --- |
+          |  | 2 |  |
+          """
+      )
+    )
+    let expected = """
+      <table>
+      <thead>
+      <tr>
+      <th align="left">Name</th>
+      <th align="left">Count</th>
+      <th align="left">Note</th>
+      </tr>
+      </thead>
+      <tr>
+      <td align="left"></td>
+      <td align="left">2</td>
+      <td align="left"></td>
+      </tr>
+      </table>
+      """
+
+    // when
+    let result = formatter.html()
+
+    // then
+    #expect(result == expected)
+  }
+
   @Test func tableWithAlignment() throws {
     // given
     let formatter = try Formatter(
