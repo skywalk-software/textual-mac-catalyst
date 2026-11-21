@@ -15,5 +15,20 @@
         ]
       ]
     }
+
+    /// The type the Markdown goes under beside the plain text, for apps that ask for Markdown.
+    static let markdownPasteboardType = "net.daringfireball.markdown"
+
+    /// The items that Copy as Markdown puts on `UIPasteboard`: the Markdown as the plain text,
+    /// with no HTML beside it, so every app pastes the symbols.
+    func markdownPasteboardItems() -> [[String: Any]] {
+      let markdown = markdown()
+      return [
+        [
+          UTType.utf8PlainText.identifier: markdown,
+          Self.markdownPasteboardType: Data(markdown.utf8),
+        ]
+      ]
+    }
   }
 #endif

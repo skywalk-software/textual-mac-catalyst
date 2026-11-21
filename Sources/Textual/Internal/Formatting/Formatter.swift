@@ -260,10 +260,7 @@ extension Formatter.Block {
       guard let leaf else {
         return nil
       }
-      return .codeBlock(
-        languageHint: languageHint,
-        code: String(leaf.attributedString.characters[...])
-      )
+      return .codeBlock(languageHint: languageHint, code: leaf.code)
     case .blockQuote:
       guard let container else {
         return nil
@@ -273,7 +270,7 @@ extension Formatter.Block {
       guard let container else {
         return nil
       }
-      return .table(columns: columns, children: container.tableRows)
+      return .table(columns: columns, children: container.tableRows(columnCount: columns.count))
     case .thematicBreak:
       return .thematicBreak
     default:
@@ -298,7 +295,9 @@ extension Formatter.Block.Container {
     }
   }
 
-  var tableRows: [Formatter.TableRow] {
+  /// The rows, each with a cell for every column. The parser writes nothing for an empty cell, so
+  /// each cell goes in the column its intent names, and the columns left over stay empty.
+  func tableRows(columnCount: Int) -> [Formatter.TableRow] {
     children.compactMap { block in
       guard
         block.intentType.kind.isTableRow,
@@ -306,14 +305,36 @@ extension Formatter.Block.Container {
       else {
         return nil
       }
-      return .init(
-        cells: container.children.compactMap(\.leaf?.inlineNodes)
-      )
+      var cells: [[Formatter.InlineNode]] = Array(repeating: [], count: columnCount)
+      for cell in container.children {
+        guard
+          case .tableCell(let columnIndex) = cell.intentType.kind,
+          let inlineNodes = cell.leaf?.inlineNodes
+        else {
+          continue
+        }
+        if columnIndex >= cells.count {
+          cells += Array(repeating: [], count: columnIndex - cells.count + 1)
+        }
+        cells[columnIndex] = inlineNodes
+      }
+      return .init(cells: cells)
     }
   }
 }
 
 extension Formatter.Block.Leaf {
+  /// The text of a code block. A math block drawn from one holds its formula as an attachment.
+  var code: String {
+    attributedString.runs.map { run in
+      if let math = run.textual.attachment?.base as? MathAttachment {
+        return math.latex
+      }
+      return String(attributedString[run.range].characters[...])
+    }
+    .joined()
+  }
+
   var inlineNodes: [Formatter.InlineNode] {
     self.attributedString.runs
       .map { self.attributedString[$0.range] }

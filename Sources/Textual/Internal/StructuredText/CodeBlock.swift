@@ -9,11 +9,7 @@ extension StructuredText {
     private let languageHint: String?
 
     init(_ content: AttributedSubstring, languageHint: String?) {
-      if let last = content.characters.indices.last, content.characters[last] == "\n" {
-        self.content = content[..<last]
-      } else {
-        self.content = content
-      }
+      self.content = content.droppingCodeBlockLineBreak()
       self.languageHint = languageHint
     }
 

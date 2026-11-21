@@ -21,5 +21,20 @@
       #expect(items.first?[UTType.plainText.identifier] == nil)
       #expect(items.first?[UTType.html.identifier] as? String == formatter.html())
     }
+
+    @Test func copyAsMarkdownPutsTheMarkdownWherePlainTextGoes() throws {
+      // given
+      let formatter = try Formatter(NSAttributedString(markdown: "Copy **this** text."))
+
+      // when
+      let items = formatter.markdownPasteboardItems()
+
+      // then
+      #expect(items.count == 1)
+      #expect(items.first?[UTType.utf8PlainText.identifier] as? String == "Copy **this** text.")
+      #expect(
+        items.first?[Formatter.markdownPasteboardType] as? Data == Data("Copy **this** text.".utf8))
+      #expect(items.first?[UTType.html.identifier] == nil)
+    }
   }
 #endif
