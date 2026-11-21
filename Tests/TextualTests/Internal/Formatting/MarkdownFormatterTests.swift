@@ -44,7 +44,9 @@ struct MarkdownFormatterTests {
   }
 
   @Test func symbolsThatWouldStartAStyleAreEscaped() throws {
-    #expect(try markdown("2\\*3\\*4 and snake_case and \\_x\\_") == "2\\*3\\*4 and snake_case and \\_x\\_")
+    #expect(
+      try markdown("2\\*3\\*4 and snake_case and \\_x\\_") == "2\\*3\\*4 and snake_case and \\_x\\_"
+    )
     #expect(try markdown("\\# not a heading") == "\\# not a heading")
     #expect(try markdown("1\\. not a list") == "1\\. not a list")
   }

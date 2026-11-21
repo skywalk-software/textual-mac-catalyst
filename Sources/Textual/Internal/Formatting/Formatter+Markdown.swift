@@ -324,8 +324,9 @@ extension String {
     }
     let digits = self.prefix(while: \.isNumber)
     let afterDigits = self.dropFirst(digits.count)
-    if !digits.isEmpty, afterDigits == "." || afterDigits == ")" || afterDigits.hasPrefix(". ")
-      || afterDigits.hasPrefix(") ")
+    if !digits.isEmpty,
+      afterDigits == "." || afterDigits == ")" || afterDigits.hasPrefix(". ")
+        || afterDigits.hasPrefix(") ")
     {
       return String(digits) + "\\" + afterDigits
     }
