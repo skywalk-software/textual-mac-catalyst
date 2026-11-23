@@ -47,20 +47,36 @@ extension StructuredText {
       Grid(horizontalSpacing: spacing.horizontal, verticalSpacing: spacing.vertical) {
         ForEach(rowRuns.indices, id: \.self) { rowIndex in
           let rowRun = rowRuns[rowIndex]
-          let rowContent = content[rowRun.range]
-          let columnRuns = rowContent.blockRuns(parent: rowRun.intent)
+          let cells = cellsByColumn(in: content[rowRun.range], rowIntent: rowRun.intent)
 
           GridRow {
-            ForEach(columnRuns.indices, id: \.self) { columnIndex in
-              let cellRun = columnRuns[columnIndex]
-              let cellContent = rowContent[cellRun.range]
-
-              TableCell(cellContent, row: rowIndex, column: columnIndex)
+            ForEach(cells.indices, id: \.self) { columnIndex in
+              TableCell(cells[columnIndex], row: rowIndex, column: columnIndex)
                 .gridColumnAlignment(alignment(for: columnIndex))
             }
           }
         }
       }
+    }
+
+    /// The row's cells, one for every column, with `nil` for an empty cell. The parser writes
+    /// nothing for an empty cell, so each cell goes in the column its intent names.
+    private func cellsByColumn(
+      in rowContent: AttributedSubstring,
+      rowIntent: PresentationIntent.IntentType?
+    ) -> [AttributedSubstring?] {
+      var cells: [AttributedSubstring?] = Array(repeating: nil, count: columns.count)
+      for cellRun in rowContent.blockRuns(parent: rowIntent) {
+        guard case .tableCell(let columnIndex) = cellRun.intent?.kind else {
+          continue
+        }
+        if columnIndex >= cells.count {
+          cells += Array(repeating: nil, count: columnIndex - cells.count + 1)
+        }
+        let start = cells[columnIndex]?.startIndex ?? cellRun.range.lowerBound
+        cells[columnIndex] = rowContent[start..<cellRun.range.upperBound]
+      }
+      return cells
     }
 
     private var indentationLevel: Int {

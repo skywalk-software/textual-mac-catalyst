@@ -4,10 +4,11 @@ extension StructuredText {
   struct TableCell: View {
     @Environment(\.tableCellStyle) private var tableCellStyle
 
-    private let content: AttributedSubstring
+    private let content: AttributedSubstring?
     private let identifier: TableCell.Identifier
 
-    init(_ content: AttributedSubstring, row: Int, column: Int) {
+    /// Creates a cell; `nil` content makes an empty cell that still takes its place in the row.
+    init(_ content: AttributedSubstring?, row: Int, column: Int) {
       self.content = content
       self.identifier = .init(row: row, column: column)
     }
@@ -29,16 +30,22 @@ extension StructuredText {
       AnyView(resolvedStyle)
     }
 
+    @ViewBuilder
     private var label: some View {
-      WithInlineStyle(AttributedString(content)) {
-        TextFragment($0)
+      if let content {
+        WithInlineStyle(AttributedString(content)) {
+          TextFragment($0)
+        }
+        // A cell is narrower than the whole text, so its attachments are measured against the cell.
+        .coordinateSpace(.textContainer)
+      } else {
+        Color.clear
+          .frame(width: 0, height: 0)
       }
-      // A cell is narrower than the whole text, so its attachments are measured against the cell.
-      .coordinateSpace(.textContainer)
     }
 
     private var indentationLevel: Int {
-      content.presentationIntent?.indentationLevel ?? 0
+      content?.presentationIntent?.indentationLevel ?? 0
     }
   }
 }
