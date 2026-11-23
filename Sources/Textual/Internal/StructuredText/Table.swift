@@ -73,7 +73,8 @@ extension StructuredText {
         if columnIndex >= cells.count {
           cells += Array(repeating: nil, count: columnIndex - cells.count + 1)
         }
-        cells[columnIndex] = rowContent[cellRun.range]
+        let start = cells[columnIndex]?.startIndex ?? cellRun.range.lowerBound
+        cells[columnIndex] = rowContent[start..<cellRun.range.upperBound]
       }
       return cells
     }
